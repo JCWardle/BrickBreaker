@@ -1,4 +1,6 @@
-﻿class Brick {
+﻿var game: BrickBreaker;
+
+class Brick {
     colour: string;
     width: number;
     height: number;
@@ -14,13 +16,38 @@
     }
 }
 
+class Player extends Brick {
+    position: number;
+
+    constructor() {
+        super();
+        this.colour = "rgb(0,0,0)";
+        this.position = 250;
+    }
+
+    moveLeft() {
+        this.position -= 10;
+
+        if (this.position < this.width / 2) {
+            this.position = this.width / 2;
+        }
+    }
+
+    moveRight() {
+        this.position += 10;
+    }
+}
+
 class BrickBreaker {
     private _canvas : HTMLCanvasElement;
-    private _bricks : Array<Array<Brick>>;
+    private _bricks: Array<Array<Brick>>;
+    private _player: Player;
+    private _renderTimer: number;
 
     constructor(canvas : HTMLCanvasElement) {
         this._canvas = canvas;
         this._bricks = new Array<Array<Brick>>(5);
+        this._player = new Player();
 
         for (var i = 0; i < this._bricks.length; i++) {
             this._bricks[i] = new Array<Brick>(15);
@@ -28,6 +55,12 @@ class BrickBreaker {
                 this._bricks[i][j] = new Brick();
             }
         }
+
+        var FPS = 30;
+        this._renderTimer = setInterval(function() {
+            game.update();
+            game.render();
+        }, FPS);
     }
 
     private update() {
@@ -36,6 +69,8 @@ class BrickBreaker {
 
     private render() {
         var context = this._canvas.getContext("2d");
+        context.fillStyle = "rgb(255, 255,255)";
+        context.clearRect(0, 0, 500, 500);
         
         //Render Bricks        
         for (var y = 0; y < this._bricks.length; y++) {
@@ -50,16 +85,30 @@ class BrickBreaker {
         }
 
         //Render Player
+        context.fillStyle = this._player.colour;
+        context.fillRect(this._player.position + this._player.width / 2, 300, this._player.width, this._player.height);
     }
 
     play() {
         this.update();
         this.render();
     }
+
+    input(event) {
+        //Left arrow;
+        if (event.keyCode === 37) {
+            game._player.moveLeft();
+        }
+
+        //Right arrow;
+        if (event.keyCode === 39) {
+            game._player.moveRight();
+        }
+    }
 }
 
 window.onload = () => {
     var canvas = document.getElementsByTagName("canvas")[0];
-    var game = new BrickBreaker(canvas);
-    game.play();
+    game = new BrickBreaker(canvas);
+    document.onkeydown = game.input;
 };
