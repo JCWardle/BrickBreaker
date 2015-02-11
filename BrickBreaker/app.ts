@@ -1,92 +1,144 @@
 ﻿var game: BrickBreaker;
 
+class Ball {
+    private velocity: number;
+    private radius: number;
+    private speedX: number;
+    private speedY: number;
+    private x: number;
+    private y: number;
+
+    constructor() {
+        this.radius = 5;
+        this.x = 400;
+        this.y = 300;
+        this.speedX = 5;
+        this.speedY = 5;
+    }
+
+    update(boundx, boundy) {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x > boundx || this.x < 0)
+            this.speedX = -this.speedX;
+        if (this.y > boundy || this.y < 0)
+            this.speedY = -this.speedY;
+    }
+
+    render(context : CanvasRenderingContext2D) {
+        context.fillStyle = "rgb(255,0,0)";
+        context.beginPath();
+        context.arc(this.x - this.radius, this.y - this.radius, this.radius, 0, 2 * Math.PI, false);
+        context.stroke();
+    }
+}
+
 class Brick {
     colour: string;
     width: number;
     height: number;
     alive: boolean;
+    x: number;
+    y: number;
 
-    constructor() {
+    constructor(x ,y) {
         this.colour = "rgb(" + Math.floor(Math.random() * 255)
             + "," + Math.floor(Math.random() * 255) + ","
             + Math.floor(Math.random() * 255) + ")";
         this.width = 50;
         this.height = 10;
         this.alive = true;
+        this.x = x * this.width;
+        this.y = y * this.height + 50;
+    }
+
+    render(context: CanvasRenderingContext2D, x, y) {
+        if (this.alive) {
+            context.fillStyle = this.colour;
+            context.fillRect(this.x, this.y, this.width, this.height);
+        }
     }
 }
 
 class Player extends Brick {
-    position: number;
+    maxPosition: number;
 
-    constructor() {
-        super();
+    constructor(maxPosition) {
+        super(0, 0);
+        this.x = (maxPosition / 2) - 25;
+        this.y = 380;
         this.colour = "rgb(0,0,0)";
-        this.position = 250;
+        this.maxPosition = maxPosition;
     }
 
     moveLeft() {
-        this.position -= 10;
+        this.x -= 10;
 
-        if (this.position < this.width / 2) {
-            this.position = this.width / 2;
+        if (this.x < this.width / 2) {
+            this.x = this.width / 2;
         }
     }
 
     moveRight() {
-        this.position += 10;
+        this.x += 10;
+
+        if (this.x > this.maxPosition - this.width / 2) {
+            this.x = this.maxPosition - this.width / 2;
+        }
+    }
+
+    render(context: CanvasRenderingContext2D) {
+        context.fillStyle = this.colour;
+        context.fillRect(this.x - this.width / 2, this.y, this.width, this.height);
     }
 }
 
 class BrickBreaker {
-    private _canvas : HTMLCanvasElement;
-    private _bricks: Array<Array<Brick>>;
-    private _player: Player;
-    private _renderTimer: number;
+    private canvas : HTMLCanvasElement;
+    private bricks: Array<Array<Brick>>;
+    private player: Player;
+    private ball: Ball;
+    private renderTimer: number;
 
     constructor(canvas : HTMLCanvasElement) {
-        this._canvas = canvas;
-        this._bricks = new Array<Array<Brick>>(5);
-        this._player = new Player();
+        this.canvas = canvas;
+        this.bricks = new Array<Array<Brick>>(5);
+        this.player = new Player(canvas.width);
+        this.ball = new Ball();
 
-        for (var i = 0; i < this._bricks.length; i++) {
-            this._bricks[i] = new Array<Brick>(15);
-            for (var j = 0; j < this._bricks[i].length; j ++) {
-                this._bricks[i][j] = new Brick();
+        for (var i = 0; i < this.bricks.length; i++) {
+            this.bricks[i] = new Array<Brick>(16);
+            for (var j = 0; j < this.bricks[i].length; j ++) {
+                this.bricks[i][j] = new Brick(j, i);
             }
         }
 
-        var FPS = 30;
-        this._renderTimer = setInterval(function() {
+        var fps = 30;
+        this.renderTimer = setInterval(function() {
             game.update();
             game.render();
-        }, FPS);
+        }, fps);
     }
 
     private update() {
-
+        this.ball.update(this.canvas.width, this.canvas.height);
     }
 
     private render() {
-        var context = this._canvas.getContext("2d");
+        var context = this.canvas.getContext("2d");
         context.fillStyle = "rgb(255, 255,255)";
-        context.clearRect(0, 0, 500, 500);
-        
-        //Render Bricks        
-        for (var y = 0; y < this._bricks.length; y++) {
-            for (var x = 0; x < this._bricks[y].length; x++) {
-                var brick = this._bricks[y][x];
+        context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-                if (brick.alive) {
-                    context.fillStyle = brick.colour;
-                    context.fillRect(x * brick.width, y * brick.height, brick.width, brick.height);
-                }
+        this.player.render(context);
+        this.ball.render(context);
+             
+        for (var y = 0; y < this.bricks.length; y++) {
+            for (var x = 0; x < this.bricks[y].length; x++) {
+                var brick = this.bricks[y][x];
+                brick.render(context, x, y);
             }
         }
-
-        //Render Player
-        context.fillStyle = this._player.colour;
-        context.fillRect(this._player.position + this._player.width / 2, 300, this._player.width, this._player.height);
     }
 
     play() {
@@ -97,12 +149,12 @@ class BrickBreaker {
     input(event) {
         //Left arrow;
         if (event.keyCode === 37) {
-            game._player.moveLeft();
+            game.player.moveLeft();
         }
 
         //Right arrow;
         if (event.keyCode === 39) {
-            game._player.moveRight();
+            game.player.moveRight();
         }
     }
 }

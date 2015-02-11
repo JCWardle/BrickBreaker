@@ -6,78 +6,121 @@
 };
 var game;
 
+var Ball = (function () {
+    function Ball() {
+        this.radius = 5;
+        this.x = 400;
+        this.y = 300;
+        this.speedX = 5;
+        this.speedY = 5;
+    }
+    Ball.prototype.update = function (boundx, boundy) {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x > boundx || this.x < 0)
+            this.speedX = -this.speedX;
+        if (this.y > boundy || this.y < 0)
+            this.speedY = -this.speedY;
+    };
+
+    Ball.prototype.render = function (context) {
+        context.fillStyle = "rgb(255,0,0)";
+        context.beginPath();
+        context.arc(this.x - this.radius, this.y - this.radius, this.radius, 0, 2 * Math.PI, false);
+        context.stroke();
+    };
+    return Ball;
+})();
+
 var Brick = (function () {
-    function Brick() {
+    function Brick(x, y) {
         this.colour = "rgb(" + Math.floor(Math.random() * 255) + "," + Math.floor(Math.random() * 255) + "," + Math.floor(Math.random() * 255) + ")";
         this.width = 50;
         this.height = 10;
         this.alive = true;
+        this.x = x * this.width;
+        this.y = y * this.height + 50;
     }
+    Brick.prototype.render = function (context, x, y) {
+        if (this.alive) {
+            context.fillStyle = this.colour;
+            context.fillRect(this.x, this.y, this.width, this.height);
+        }
+    };
     return Brick;
 })();
 
 var Player = (function (_super) {
     __extends(Player, _super);
-    function Player() {
-        _super.call(this);
+    function Player(maxPosition) {
+        _super.call(this, 0, 0);
+        this.x = (maxPosition / 2) - 25;
+        this.y = 380;
         this.colour = "rgb(0,0,0)";
-        this.position = 250;
+        this.maxPosition = maxPosition;
     }
     Player.prototype.moveLeft = function () {
-        this.position -= 10;
+        this.x -= 10;
 
-        if (this.position < this.width / 2) {
-            this.position = this.width / 2;
+        if (this.x < this.width / 2) {
+            this.x = this.width / 2;
         }
     };
 
     Player.prototype.moveRight = function () {
-        this.position += 10;
+        this.x += 10;
+
+        if (this.x > this.maxPosition - this.width / 2) {
+            this.x = this.maxPosition - this.width / 2;
+        }
+    };
+
+    Player.prototype.render = function (context) {
+        context.fillStyle = this.colour;
+        context.fillRect(this.x - this.width / 2, this.y, this.width, this.height);
     };
     return Player;
 })(Brick);
 
 var BrickBreaker = (function () {
     function BrickBreaker(canvas) {
-        this._canvas = canvas;
-        this._bricks = new Array(5);
-        this._player = new Player();
+        this.canvas = canvas;
+        this.bricks = new Array(5);
+        this.player = new Player(canvas.width);
+        this.ball = new Ball();
 
-        for (var i = 0; i < this._bricks.length; i++) {
-            this._bricks[i] = new Array(15);
-            for (var j = 0; j < this._bricks[i].length; j++) {
-                this._bricks[i][j] = new Brick();
+        for (var i = 0; i < this.bricks.length; i++) {
+            this.bricks[i] = new Array(16);
+            for (var j = 0; j < this.bricks[i].length; j++) {
+                this.bricks[i][j] = new Brick(j, i);
             }
         }
 
-        var FPS = 30;
-        this._renderTimer = setInterval(function () {
+        var fps = 30;
+        this.renderTimer = setInterval(function () {
             game.update();
             game.render();
-        }, FPS);
+        }, fps);
     }
     BrickBreaker.prototype.update = function () {
+        this.ball.update(this.canvas.width, this.canvas.height);
     };
 
     BrickBreaker.prototype.render = function () {
-        var context = this._canvas.getContext("2d");
+        var context = this.canvas.getContext("2d");
         context.fillStyle = "rgb(255, 255,255)";
-        context.clearRect(0, 0, 500, 500);
+        context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        for (var y = 0; y < this._bricks.length; y++) {
-            for (var x = 0; x < this._bricks[y].length; x++) {
-                var brick = this._bricks[y][x];
+        this.player.render(context);
+        this.ball.render(context);
 
-                if (brick.alive) {
-                    context.fillStyle = brick.colour;
-                    context.fillRect(x * brick.width, y * brick.height, brick.width, brick.height);
-                }
+        for (var y = 0; y < this.bricks.length; y++) {
+            for (var x = 0; x < this.bricks[y].length; x++) {
+                var brick = this.bricks[y][x];
+                brick.render(context, x, y);
             }
         }
-
-        //Render Player
-        context.fillStyle = this._player.colour;
-        context.fillRect(this._player.position + this._player.width / 2, 300, this._player.width, this._player.height);
     };
 
     BrickBreaker.prototype.play = function () {
@@ -88,12 +131,12 @@ var BrickBreaker = (function () {
     BrickBreaker.prototype.input = function (event) {
         //Left arrow;
         if (event.keyCode === 37) {
-            game._player.moveLeft();
+            game.player.moveLeft();
         }
 
         //Right arrow;
         if (event.keyCode === 39) {
-            game._player.moveRight();
+            game.player.moveRight();
         }
     };
     return BrickBreaker;
